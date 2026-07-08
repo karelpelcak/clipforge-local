@@ -5,6 +5,7 @@ import ffmpegPath from 'ffmpeg-static'
 import ffprobe from 'ffprobe-static'
 import multer from 'multer'
 import sharp from 'sharp'
+import { siKick, siTwitch, siYoutube } from 'simple-icons'
 import { spawn } from 'node:child_process'
 import crypto from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
@@ -162,10 +163,8 @@ async function makeProfileImage(config, outputPath) {
 }
 
 function platformMark(platform) {
-  if (platform === 'youtube') return '<rect x="30" y="30" width="52" height="36" rx="10" fill="#ff3b30"/><path d="M51 39 L51 57 L67 48 Z" fill="#ffffff"/>'
-  const color = platform === 'kick' ? '#53fc18' : '#a970ff'
-  const letter = platform === 'kick' ? 'K' : 'T'
-  return `<text x="55" y="63" text-anchor="middle" fill="${color}" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="800">${letter}</text>`
+  const icon = platform === 'youtube' ? siYoutube : platform === 'twitch' ? siTwitch : siKick
+  return `<g transform="translate(31 24) scale(2)"><path d="${icon.path}" fill="#${icon.hex}"/></g>`
 }
 
 function escapeXml(value) { return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') }

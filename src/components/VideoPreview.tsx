@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Youtube } from 'lucide-react'
+import { siKick, siTwitch, siYoutube } from 'simple-icons'
 import type { CropRect, EditorSettings } from '../types'
 
 interface VideoPreviewProps {
@@ -77,6 +77,6 @@ function CroppedVideo({ src, crop }: { src: string; crop: CropRect }) {
 }
 
 function PlatformMark({ platform }: { platform: EditorSettings['platform'] }) {
-  if (platform === 'youtube') return <Youtube size={17} aria-hidden="true" />
-  return <b aria-hidden="true">{platform === 'twitch' ? 'T' : 'K'}</b>
+  const icon = platform === 'youtube' ? siYoutube : platform === 'twitch' ? siTwitch : siKick
+  return <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" style={{ color: `#${icon.hex}` }}><path fill="currentColor" d={icon.path} /></svg>
 }
