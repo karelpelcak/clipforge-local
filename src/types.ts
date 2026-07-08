@@ -10,8 +10,14 @@ export interface CropRect {
 export interface EditorSettings {
   platform: Platform
   nickname: string
+}
+
+export interface ClipDraft {
+  id: string
+  file: File
   gameplayCrop: CropRect
   cameraCrop: CropRect
+  prepared: boolean
 }
 
 export interface JobStatus {
@@ -21,4 +27,6 @@ export interface JobStatus {
   progress: number
   error?: string
   filename?: string
+  completed?: number
+  total?: number
 }

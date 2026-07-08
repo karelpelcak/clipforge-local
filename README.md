@@ -1,16 +1,18 @@
 # ClipForge Local
 
-ClipForge Local is a small, privacy-friendly web application for turning a single gaming recording into a vertical clip. The source recording can contain both gameplay and webcam footage; each region can be moved and resized before export.
+ClipForge Local is a small, privacy-friendly web application for turning gaming recordings into vertical clips. Each source recording can contain both gameplay and webcam footage; both regions can be moved and resized independently before export.
 
 Everything runs locally. Uploaded clips are not sent to an external service.
 
 ## Features
 
-- One source video containing gameplay and webcam footage
+- Batch queue with up to 10 source videos
 - Movable and resizable gameplay and webcam crops
+- Independent crop settings for every queued clip
 - Fixed 9:16 layout with webcam on top and gameplay below
 - YouTube, Twitch, or Kick profile label
 - Local MP4 export in 1080 × 1920 using H.264 and AAC
+- One-click ZIP download when exporting multiple clips
 - Responsive preview and keyboard-accessible crop controls
 
 ## Requirements

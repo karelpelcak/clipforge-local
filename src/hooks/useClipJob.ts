@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { EditorSettings, JobStatus } from '../types'
+import type { ClipDraft, EditorSettings, JobStatus } from '../types'
 
 export function useClipJob() {
   const [job, setJob] = useState<JobStatus | null>(null)
@@ -30,12 +30,17 @@ export function useClipJob() {
     pollingRef.current = window.setInterval(readStatus, 1000)
   }, [stopPolling])
 
-  const submit = useCallback(async (clip: File, settings: EditorSettings) => {
+  const submit = useCallback(async (clips: ClipDraft[], settings: EditorSettings) => {
     setSubmitError('')
     setJob({ id: '', state: 'queued', phase: 'Nahrávám klipy…', progress: 4 })
     const data = new FormData()
-    data.append('clip', clip)
-    Object.entries(settings).forEach(([key, value]) => data.append(key, typeof value === 'object' ? JSON.stringify(value) : value))
+    clips.forEach((clip) => data.append('clips', clip.file))
+    data.append('items', JSON.stringify(clips.map((clip) => ({
+      originalName: clip.file.name,
+      gameplayCrop: clip.gameplayCrop,
+      cameraCrop: clip.cameraCrop,
+    }))))
+    Object.entries(settings).forEach(([key, value]) => data.append(key, value))
 
     try {
       const response = await fetch('/api/jobs', { method: 'POST', body: data })

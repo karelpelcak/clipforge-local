@@ -1,13 +1,15 @@
 import { useEffect, useRef } from 'react'
 import { Youtube } from 'lucide-react'
-import type { EditorSettings } from '../types'
+import type { CropRect, EditorSettings } from '../types'
 
 interface VideoPreviewProps {
   settings: EditorSettings
   videoUrl: string
+  gameplayCrop?: CropRect
+  cameraCrop?: CropRect
 }
 
-export function VideoPreview({ settings, videoUrl }: VideoPreviewProps) {
+export function VideoPreview({ settings, videoUrl, gameplayCrop, cameraCrop }: VideoPreviewProps) {
   return (
     <section className="preview-panel" aria-labelledby="preview-heading">
       <div className="preview-heading">
@@ -17,10 +19,10 @@ export function VideoPreview({ settings, videoUrl }: VideoPreviewProps) {
       <div className="phone-frame">
         <div className="video-stage">
           <div className="split-camera">
-            {videoUrl ? <CroppedVideo src={videoUrl} crop={settings.cameraCrop} /> : <div className="split-placeholder">WEBCAM</div>}
+            {videoUrl && cameraCrop ? <CroppedVideo src={videoUrl} crop={cameraCrop} /> : <div className="split-placeholder">WEBCAM</div>}
           </div>
           <div className="split-gameplay">
-            {videoUrl ? <CroppedVideo src={videoUrl} crop={settings.gameplayCrop} /> : <div className="split-placeholder">GAMEPLAY</div>}
+            {videoUrl && gameplayCrop ? <CroppedVideo src={videoUrl} crop={gameplayCrop} /> : <div className="split-placeholder">GAMEPLAY</div>}
           </div>
           {settings.nickname && (
             <div className={`creator-tag ${settings.platform}`}>
@@ -36,7 +38,7 @@ export function VideoPreview({ settings, videoUrl }: VideoPreviewProps) {
   )
 }
 
-function CroppedVideo({ src, crop }: { src: string; crop: EditorSettings['gameplayCrop'] }) {
+function CroppedVideo({ src, crop }: { src: string; crop: CropRect }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
