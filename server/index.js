@@ -4,6 +4,7 @@ import express from 'express'
 import ffmpegPath from 'ffmpeg-static'
 import ffprobe from 'ffprobe-static'
 import multer from 'multer'
+import sharp from 'sharp'
 import { spawn } from 'node:child_process'
 import crypto from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
@@ -112,12 +113,12 @@ async function processBatch(job, clips, shared) {
       await fs.mkdir(clipDir, { recursive: true })
       const config = { ...shared, ...clip, jobDir: clipDir }
       const duration = await getDuration(config.clip)
-      const assPath = path.join(clipDir, 'profile.ass')
-      await fs.writeFile(assPath, makeProfileOverlay(config, duration), 'utf8')
+      const profilePath = path.join(clipDir, 'profile.png')
+      await makeProfileImage(config, profilePath)
       update(job, 'processing', `Renderuji ${label}`, 12 + Math.floor(index / clips.length * 82))
       const name = `${String(index + 1).padStart(2, '0')}-${clip.originalName}.mp4`
       const output = path.join(clipDir, name)
-      await renderVideo(config, assPath, output, duration)
+      await renderVideo(config, profilePath, output, duration)
       outputs.push({ path: output, name })
       job.completed = index + 1
     }
@@ -138,32 +139,36 @@ async function processBatch(job, clips, shared) {
 
 function update(job, state, phase, progress) { Object.assign(job, { state, phase, progress }) }
 
-async function renderVideo(config, assPath, output, duration) {
-  const assFilter = `ass='${escapeFilterPath(assPath)}'`
-  const args = ['-y', '-i', config.clip]
+async function renderVideo(config, profilePath, output, duration) {
+  const args = ['-y', '-i', config.clip, '-loop', '1', '-i', profilePath]
   const gameplayCrop = cropFilter(config.gameplayCrop)
   const cameraCrop = cropFilter(config.cameraCrop)
-  const filter = `[0:v]split=2[cameraSource][gameSource];[cameraSource]${cameraCrop},scale=1080:640:force_original_aspect_ratio=increase,crop=1080:640[camera];[gameSource]${gameplayCrop},scale=1080:1280:force_original_aspect_ratio=increase,crop=1080:1280[gameplay];[camera][gameplay]vstack=inputs=2,${assFilter}[v]`
+  const filter = `[0:v]split=2[cameraSource][gameSource];[cameraSource]${cameraCrop},scale=1080:640:force_original_aspect_ratio=increase,crop=1080:640[camera];[gameSource]${gameplayCrop},scale=1080:1280:force_original_aspect_ratio=increase,crop=1080:1280[gameplay];[camera][gameplay]vstack=inputs=2[base];[base][1:v]overlay=(W-w)/2:640-h/2:eof_action=repeat:shortest=0[v]`
 
   args.push('-filter_complex', filter, '-map', '[v]', '-map', '0:a?', '-t', String(duration), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', '-shortest', output)
   await run(ffmpegPath, args)
 }
 
-function makeProfileOverlay(config, duration) {
-  const handle = `${platformLabel(config.platform)}  @${config.nickname}`.replace(/[{}]/g, '')
-  return `[Script Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Profile,Arial,38,&H00FFFFFF,&H000000FF,&H00101010,&HC0000000,-1,0,0,0,100,100,0,0,3,0,0,5,0,0,0,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:00.00,${assTime(duration)},Profile,,0,0,0,,{\\an5\\pos(540,640)}${handle}\n`
+async function makeProfileImage(config, outputPath) {
+  const handle = `@${escapeXml(config.nickname)}`
+  const width = Math.min(720, Math.max(360, 210 + handle.length * 24))
+  const mark = platformMark(config.platform)
+  const svg = `<svg width="${width}" height="96" viewBox="0 0 ${width} 96" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="2" width="${width - 4}" height="92" rx="46" fill="#0b0c0e" fill-opacity="0.94" stroke="#696c70" stroke-width="2"/>
+    ${mark}
+    <text x="104" y="62" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="40" font-weight="700">${handle}</text>
+  </svg>`
+  await sharp(Buffer.from(svg)).png().toFile(outputPath)
 }
 
-function assTime(seconds) {
-  const safe = Math.max(0, Number(seconds) || 0)
-  const hours = Math.floor(safe / 3600)
-  const minutes = Math.floor((safe % 3600) / 60)
-  const secs = (safe % 60).toFixed(2).padStart(5, '0')
-  return `${hours}:${String(minutes).padStart(2, '0')}:${secs}`
+function platformMark(platform) {
+  if (platform === 'youtube') return '<rect x="30" y="30" width="52" height="36" rx="10" fill="#ff3b30"/><path d="M51 39 L51 57 L67 48 Z" fill="#ffffff"/>'
+  const color = platform === 'kick' ? '#53fc18' : '#a970ff'
+  const letter = platform === 'kick' ? 'K' : 'T'
+  return `<text x="55" y="63" text-anchor="middle" fill="${color}" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="800">${letter}</text>`
 }
 
-function platformLabel(platform) { return platform === 'youtube' ? 'YOUTUBE' : platform === 'kick' ? 'KICK' : 'TWITCH' }
-function escapeFilterPath(file) { return file.replace(/\\/g, '/').replace(/:/g, '\\:').replace(/'/g, "\\'") }
+function escapeXml(value) { return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') }
 function cropFilter(crop) { return `crop=iw*${crop.width}:ih*${crop.height}:iw*${crop.x}:ih*${crop.y}` }
 
 function parseCrop(value) {
@@ -225,7 +230,7 @@ function run(command, args, capture = false) {
 
 function friendlyError(error) {
   const message = error instanceof Error ? error.message : String(error)
-  if (message.includes('ass') || message.includes('No such filter')) return 'FFmpeg v této instalaci nepodporuje vykreslení profilového štítku.'
+  if (message.includes('overlay') || message.includes('profile.png')) return 'FFmpeg nedokázal vykreslit profilový štítek.'
   return `Zpracování selhalo: ${message.slice(0, 260)}`
 }
 
