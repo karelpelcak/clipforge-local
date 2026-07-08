@@ -10,7 +10,8 @@ Everything runs locally. Uploaded clips are not sent to an external service.
 - Movable and resizable gameplay and webcam crops
 - Independent crop settings for every queued clip
 - Fixed 9:16 layout with webcam on top and gameplay below
-- YouTube, Twitch, or Kick profile label
+- YouTube, Twitch, or Kick profile label centered on the split
+- Independent nickname for every queued clip
 - Local MP4 export in 1080 × 1920 using H.264 and AAC
 - One-click ZIP download when exporting multiple clips
 - Responsive preview and keyboard-accessible crop controls

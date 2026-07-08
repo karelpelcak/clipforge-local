@@ -7,9 +7,10 @@ interface VideoPreviewProps {
   videoUrl: string
   gameplayCrop?: CropRect
   cameraCrop?: CropRect
+  nickname?: string
 }
 
-export function VideoPreview({ settings, videoUrl, gameplayCrop, cameraCrop }: VideoPreviewProps) {
+export function VideoPreview({ settings, videoUrl, gameplayCrop, cameraCrop, nickname }: VideoPreviewProps) {
   return (
     <section className="preview-panel" aria-labelledby="preview-heading">
       <div className="preview-heading">
@@ -24,10 +25,10 @@ export function VideoPreview({ settings, videoUrl, gameplayCrop, cameraCrop }: V
           <div className="split-gameplay">
             {videoUrl && gameplayCrop ? <CroppedVideo src={videoUrl} crop={gameplayCrop} /> : <div className="split-placeholder">GAMEPLAY</div>}
           </div>
-          {settings.nickname && (
+          {nickname && (
             <div className={`creator-tag ${settings.platform}`}>
               <PlatformMark platform={settings.platform} />
-              <span>@{settings.nickname.replace(/^@/, '')}</span>
+              <span>@{nickname.replace(/^@/, '')}</span>
             </div>
           )}
           <div className="safe-zone" aria-hidden="true" />

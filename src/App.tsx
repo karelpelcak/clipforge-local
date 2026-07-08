@@ -15,14 +15,14 @@ const platformOptions: Array<{ value: Platform; label: string }> = [
 ]
 
 export default function App() {
-  const [settings, setSettings] = useState<EditorSettings>({ platform: 'twitch', nickname: '' })
+  const [settings, setSettings] = useState<EditorSettings>({ platform: 'twitch' })
   const [error, setError] = useState('')
   const nicknameRef = useRef<HTMLInputElement>(null)
   const drafts = useClipDrafts()
   const { job, submitError, submit, reset } = useClipJob()
   const videoUrl = useObjectUrl(drafts.activeClip?.file || null)
   const preparedCount = drafts.clips.filter((clip) => clip.prepared).length
-  const canSubmit = drafts.clips.length > 0 && preparedCount === drafts.clips.length && Boolean(settings.nickname.trim())
+  const canSubmit = drafts.clips.length > 0 && preparedCount === drafts.clips.length && drafts.clips.every((clip) => clip.nickname.trim())
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
@@ -32,13 +32,15 @@ export default function App() {
       drafts.setActiveId(unprepared.id)
       return setError(`Nejdřív potvrď výřezy klipu „${unprepared.file.name}“.`)
     }
-    if (!settings.nickname.trim()) {
-      setError('Doplň nickname, který se zobrazí ve videích.')
-      nicknameRef.current?.focus()
+    const missingNickname = drafts.clips.find((clip) => !clip.nickname.trim())
+    if (missingNickname) {
+      drafts.setActiveId(missingNickname.id)
+      setError(`Doplň nickname pro klip „${missingNickname.file.name}“.`)
+      window.setTimeout(() => nicknameRef.current?.focus(), 0)
       return
     }
     setError('')
-    void submit(drafts.clips, { ...settings, nickname: settings.nickname.trim().replace(/^@/, '') })
+    void submit(drafts.clips, settings)
   }
 
   const handleReset = () => {
@@ -95,11 +97,11 @@ export default function App() {
               <section className="form-section" aria-labelledby="profile-heading">
                 <div className="section-number">03</div>
                 <div className="section-content">
-                  <h2 id="profile-heading">Profil pro všechny klipy</h2>
-                  <p>Platforma a nickname budou stejné v celé dávce.</p>
+                  <h2 id="profile-heading">Profil klipu</h2>
+                  <p>Platforma platí pro dávku, nickname nastavíš zvlášť právě vybranému klipu.</p>
                   <fieldset className="platform-picker"><legend>Platforma</legend><div>{platformOptions.map((platform) => <label key={platform.value} className={settings.platform === platform.value ? 'active' : ''}><input type="radio" name="platform" value={platform.value} checked={settings.platform === platform.value} onChange={() => setSettings((current) => ({ ...current, platform: platform.value }))} />{platform.label}</label>)}</div></fieldset>
-                  <label className="input-label" htmlFor="nickname">Nickname</label>
-                  <div className="nickname-input"><span>@</span><input ref={nicknameRef} id="nickname" value={settings.nickname} onChange={(event) => setSettings((current) => ({ ...current, nickname: event.target.value }))} placeholder="tvuj_nickname" maxLength={32} aria-invalid={Boolean(error && !settings.nickname)} aria-describedby={error ? 'form-error' : undefined} /></div>
+                  <label className="input-label" htmlFor="nickname">Nickname pro {drafts.activeClip?.file.name || 'vybraný klip'}</label>
+                  <div className="nickname-input"><span>@</span><input ref={nicknameRef} id="nickname" value={drafts.activeClip?.nickname || ''} onChange={(event) => drafts.updateNickname(event.target.value)} placeholder="tvuj_nickname" maxLength={32} disabled={!drafts.activeClip} aria-invalid={Boolean(error && drafts.activeClip && !drafts.activeClip.nickname)} aria-describedby={error ? 'form-error' : undefined} /></div>
                 </div>
               </section>
 
@@ -109,7 +111,7 @@ export default function App() {
                 <small>{preparedCount}/{drafts.clips.length} připraveno · výstup MP4 nebo ZIP</small>
               </div>
             </form>
-            <VideoPreview settings={settings} gameplayCrop={drafts.activeClip?.gameplayCrop} cameraCrop={drafts.activeClip?.cameraCrop} videoUrl={videoUrl} />
+            <VideoPreview settings={settings} nickname={drafts.activeClip?.nickname} gameplayCrop={drafts.activeClip?.gameplayCrop} cameraCrop={drafts.activeClip?.cameraCrop} videoUrl={videoUrl} />
           </div>
         )}
       </main>

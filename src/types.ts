@@ -9,12 +9,12 @@ export interface CropRect {
 
 export interface EditorSettings {
   platform: Platform
-  nickname: string
 }
 
 export interface ClipDraft {
   id: string
   file: File
+  nickname: string
   gameplayCrop: CropRect
   cameraCrop: CropRect
   prepared: boolean

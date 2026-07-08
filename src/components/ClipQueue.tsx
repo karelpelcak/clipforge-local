@@ -41,7 +41,7 @@ export function ClipQueue({ clips, activeId, onAdd, onSelect, onRemove }: ClipQu
               <button type="button" className="queue-select" onClick={() => onSelect(clip.id)} aria-current={clip.id === activeId ? 'true' : undefined}>
                 <span className="queue-index">{String(index + 1).padStart(2, '0')}</span>
                 <span className="queue-file-icon"><Film size={16} aria-hidden="true" /></span>
-                <span className="queue-file"><strong>{clip.file.name}</strong><small>{formatBytes(clip.file.size)}</small></span>
+                <span className="queue-file"><strong>{clip.file.name}</strong><small>{clip.nickname ? `@${clip.nickname.replace(/^@/, '')} · ` : ''}{formatBytes(clip.file.size)}</small></span>
                 <span className={`queue-state ${clip.prepared ? 'ready' : ''}`}>{clip.prepared ? <><Check size={12} aria-hidden="true" /> Připraveno</> : clip.id === activeId ? 'Upravuješ' : 'Čeká'}</span>
               </button>
               <button type="button" className="queue-remove" onClick={() => onRemove(clip.id)} aria-label={`Odebrat ${clip.file.name}`}><Trash2 size={16} aria-hidden="true" /></button>

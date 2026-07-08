@@ -27,7 +27,6 @@ app.use(express.json())
 app.post('/api/jobs', upload.array('clips', 10), async (req, res) => {
   const body = req.body || {}
   const clips = Array.isArray(req.files) ? req.files : []
-  const nickname = String(body.nickname || '').trim().replace(/^@/, '').replace(/[^\p{L}\p{N}._-]/gu, '_').slice(0, 32)
   const items = parseItems(body.items)
   const reject = async (message) => {
     await Promise.all(clips.map((clip) => fs.rm(clip.path, { force: true })))
@@ -36,15 +35,16 @@ app.post('/api/jobs', upload.array('clips', 10), async (req, res) => {
 
   if (!clips.length) return reject('Chybí zdrojové klipy.')
   if (!items || items.length !== clips.length) return reject('Nastavení klipů není platné.')
-  if (!nickname) return reject('Nickname nesmí být prázdný.')
 
   const clipConfigs = clips.map((clip, index) => ({
     clip: clip.path,
     originalName: sanitizeBaseName(items[index].originalName || clip.originalname),
+    nickname: sanitizeNickname(items[index].nickname),
     gameplayCrop: parseCrop(items[index].gameplayCrop),
     cameraCrop: parseCrop(items[index].cameraCrop),
   }))
   if (clipConfigs.some((clip) => !clip.gameplayCrop || !clip.cameraCrop)) return reject('Některý klip má neplatné výřezy.')
+  if (clipConfigs.some((clip) => !clip.nickname)) return reject('Každý klip musí mít vlastní nickname.')
 
   const id = crypto.randomUUID()
   const jobDir = path.join(workRoot, 'jobs', id)
@@ -58,14 +58,13 @@ app.post('/api/jobs', upload.array('clips', 10), async (req, res) => {
     completed: 0,
     total: clips.length,
     output: '',
-    filename: batch ? `clipforge-${nickname}-${id.slice(0, 8)}.zip` : `clipforge-${nickname}.mp4`,
+    filename: batch ? `clipforge-batch-${id.slice(0, 8)}.zip` : `clipforge-${clipConfigs[0].nickname}.mp4`,
     contentType: batch ? 'application/zip' : 'video/mp4',
   }
   jobs.set(id, job)
   res.status(202).json({ id })
 
   void processBatch(job, clipConfigs, {
-    nickname,
     platform: ['youtube', 'twitch', 'kick'].includes(body.platform) ? body.platform : 'youtube',
     jobDir,
   }).finally(async () => {
@@ -152,7 +151,7 @@ async function renderVideo(config, assPath, output, duration) {
 
 function makeProfileOverlay(config, duration) {
   const handle = `${platformLabel(config.platform)}  @${config.nickname}`.replace(/[{}]/g, '')
-  return `[Script Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Profile,Arial,38,&H00FFFFFF,&H000000FF,&H00101010,&HC0000000,-1,0,0,0,100,100,0,0,3,0,0,8,40,40,62,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:00.00,${assTime(duration)},Profile,,0,0,0,,${handle}\n`
+  return `[Script Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Profile,Arial,38,&H00FFFFFF,&H000000FF,&H00101010,&HC0000000,-1,0,0,0,100,100,0,0,3,0,0,5,0,0,0,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:00.00,${assTime(duration)},Profile,,0,0,0,,{\\an5\\pos(540,640)}${handle}\n`
 }
 
 function assTime(seconds) {
@@ -186,6 +185,10 @@ function parseItems(value) {
 function sanitizeBaseName(value) {
   const base = path.parse(String(value || 'clip')).name
   return base.normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'clip'
+}
+
+function sanitizeNickname(value) {
+  return String(value || '').trim().replace(/^@/, '').replace(/[^\p{L}\p{N}._-]/gu, '_').slice(0, 32)
 }
 
 function createZip(files, outputPath) {

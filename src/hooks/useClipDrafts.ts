@@ -14,7 +14,7 @@ export function useClipDrafts() {
     const additions = files
       .filter((file) => !known.has(`${file.name}:${file.size}:${file.lastModified}`))
       .slice(0, Math.max(0, 10 - clips.length))
-      .map((file) => ({ id: crypto.randomUUID(), file, gameplayCrop: { ...defaultGameplay }, cameraCrop: { ...defaultCamera }, prepared: false }))
+      .map((file) => ({ id: crypto.randomUUID(), file, nickname: '', gameplayCrop: { ...defaultGameplay }, cameraCrop: { ...defaultCamera }, prepared: false }))
     if (!additions.length) return
     setClips([...clips, ...additions])
     if (!activeId) setActiveId(additions[0].id)
@@ -22,6 +22,10 @@ export function useClipDrafts() {
 
   const updateCrop = useCallback((kind: 'gameplayCrop' | 'cameraCrop', crop: CropRect) => {
     setClips((current) => current.map((clip) => clip.id === activeId ? { ...clip, [kind]: crop, prepared: false } : clip))
+  }, [activeId])
+
+  const updateNickname = useCallback((nickname: string) => {
+    setClips((current) => current.map((clip) => clip.id === activeId ? { ...clip, nickname } : clip))
   }, [activeId])
 
   const markPrepared = useCallback(() => {
@@ -40,7 +44,7 @@ export function useClipDrafts() {
 
   const resetClips = useCallback(() => { setClips([]); setActiveId(null) }, [])
 
-  return { clips, activeId, activeClip, addClips, setActiveId, updateCrop, markPrepared, removeClip, resetClips }
+  return { clips, activeId, activeClip, addClips, setActiveId, updateCrop, updateNickname, markPrepared, removeClip, resetClips }
 }
 
 function fileKey(clip: ClipDraft) { return `${clip.file.name}:${clip.file.size}:${clip.file.lastModified}` }

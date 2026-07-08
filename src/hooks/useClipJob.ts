@@ -37,6 +37,7 @@ export function useClipJob() {
     clips.forEach((clip) => data.append('clips', clip.file))
     data.append('items', JSON.stringify(clips.map((clip) => ({
       originalName: clip.file.name,
+      nickname: clip.nickname.trim().replace(/^@/, ''),
       gameplayCrop: clip.gameplayCrop,
       cameraCrop: clip.cameraCrop,
     }))))
